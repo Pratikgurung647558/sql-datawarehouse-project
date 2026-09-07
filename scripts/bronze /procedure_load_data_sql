@@ -1,0 +1,103 @@
+-- =============================================================================
+-- PROCEDURE: bronze.load_bronze_tables()
+-- DESCRIPTION: Loads all bronze layer tables from CSV files
+-- BEHAVIOR: TRUNCATES (clears) existing data and reloads from source files
+-- TABLES LOADED: crm_cust_info, crm_sales_details, crm_prd_info,
+--                erp_cust_az12, erp_loc_a101, erp_px_cat_g1v2
+-- USAGE: CALL bronze.load_bronze_tables();
+-- =============================================================================
+
+
+-- PROCEDURE: bronze.load_bronze_tables()
+
+-- DROP PROCEDURE IF EXISTS bronze.load_bronze_tables();
+
+CREATE OR REPLACE PROCEDURE bronze.load_bronze_tables(
+	)
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+    -- TRY for crm_cust_info
+    BEGIN
+        TRUNCATE TABLE bronze.crm_cust_info;
+        COPY bronze.crm_cust_info
+        FROM 'C:\Users\pratik\Desktop\prop\DE\datawarehouse\sql-data-warehouse-project\datasets\source_crm\cust_info.csv'
+        DELIMITER ','
+        CSV HEADER;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE EXCEPTION 'Failed to load crm_cust_info: %', SQLERRM;
+    END;
+
+    -- TRY for crm_sales_details
+    BEGIN
+        TRUNCATE TABLE bronze.crm_sales_details;
+        COPY bronze.crm_sales_details
+        FROM 'C:\Users\pratik\Desktop\prop\DE\datawarehouse\sql-data-warehouse-project\datasets\source_crm\sales_details.csv'
+        DELIMITER ','
+        CSV HEADER;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE EXCEPTION 'Failed to load crm_sales_details: %', SQLERRM;
+    END;
+
+    -- TRY for crm_prd_info
+    BEGIN
+        TRUNCATE TABLE bronze.crm_prd_info;
+        COPY bronze.crm_prd_info
+        FROM 'C:\Users\pratik\Desktop\prop\DE\datawarehouse\sql-data-warehouse-project\datasets\source_crm\prd_info.csv'
+        DELIMITER ','
+        CSV HEADER;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE EXCEPTION 'Failed to load crm_prd_info: %', SQLERRM;
+    END;
+
+    -- TRY for erp_cust_az12
+    BEGIN
+        TRUNCATE TABLE bronze.erp_cust_az12;
+        COPY bronze.erp_cust_az12
+        FROM 'C:\Users\pratik\Desktop\prop\DE\datawarehouse\sql-data-warehouse-project\datasets\source_erp\CUST_AZ12.csv'
+        DELIMITER ','
+        CSV HEADER;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE EXCEPTION 'Failed to load erp_cust_az12: %', SQLERRM;
+    END;
+
+    -- TRY for erp_loc_a101
+    BEGIN
+        TRUNCATE TABLE bronze.erp_loc_a101;
+        COPY bronze.erp_loc_a101
+        FROM 'C:\Users\pratik\Desktop\prop\DE\datawarehouse\sql-data-warehouse-project\datasets\source_erp\LOC_A101.csv'
+        DELIMITER ','
+        CSV HEADER;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE EXCEPTION 'Failed to load erp_loc_a101: %', SQLERRM;
+    END;
+
+    -- TRY for erp_px_cat_g1v2
+    BEGIN
+        TRUNCATE TABLE bronze.erp_px_cat_g1v2;
+        COPY bronze.erp_px_cat_g1v2
+        FROM 'C:\Users\pratik\Desktop\prop\DE\datawarehouse\sql-data-warehouse-project\datasets\source_erp\PX_CAT_G1V2.csv'
+        DELIMITER ','
+        CSV HEADER;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE EXCEPTION 'Failed to load erp_px_cat_g1v2: %', SQLERRM;
+    END;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION '=====================================';
+        RAISE EXCEPTION 'Fatal error in bronze layer';
+        RAISE EXCEPTION 'Error: %', SQLERRM;
+        RAISE EXCEPTION 'State: %', SQLSTATE;
+        RAISE EXCEPTION '=====================================';
+END;
+$BODY$;
+ALTER PROCEDURE bronze.load_bronze_tables()
+    OWNER TO postgres;
+
