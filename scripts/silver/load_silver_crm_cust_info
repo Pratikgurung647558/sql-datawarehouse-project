@@ -1,0 +1,65 @@
+-- PROCEDURE: silver.load_silver_crm_cust_info()
+
+-- DROP PROCEDURE IF EXISTS silver.load_silver_crm_cust_info();
+
+CREATE OR REPLACE PROCEDURE silver.load_silver_crm_cust_info(
+	)
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+    -- Drop and recreate silver.crm_cust_info table
+    DROP TABLE IF EXISTS silver.crm_cust_info;
+    CREATE TABLE silver.crm_cust_info(
+        cst_id              INT,
+        cst_key             VARCHAR(50),
+        cst_firstname       VARCHAR(50),
+        cst_lastname        VARCHAR(50),
+        cst_create_date     DATE,
+        cst_gndr            VARCHAR(50),
+        cst_marital_status  VARCHAR(50),
+        dwh_create_date     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Insert cleaned and deduplicated data
+    -- Removes duplicates by keeping only the latest record per cst_id
+    INSERT INTO silver.crm_cust_info(
+        cst_id,
+        cst_key,
+        cst_firstname,
+        cst_lastname,
+        cst_create_date,
+        cst_gndr,
+        cst_marital_status
+    )
+    SELECT 
+        cst_id,
+        cst_key,
+        TRIM(cst_firstname) AS cst_firstname,
+        TRIM(cst_lastname)  AS cst_lastname,
+        cst_create_date,
+        CASE 
+            WHEN UPPER(cst_gndr) = 'F' THEN 'Female'
+            WHEN UPPER(cst_gndr) = 'M' THEN 'Male'
+            ELSE 'n/a'
+        END AS cst_gndr,
+        CASE 
+            WHEN UPPER(cst_marital_status) = 'S' THEN 'Single'
+            WHEN UPPER(cst_marital_status) = 'M' THEN 'Married'
+            ELSE 'n/a'
+        END AS cst_marital_status
+    FROM (
+        SELECT 
+            *,
+            ROW_NUMBER() OVER (
+                PARTITION BY cst_id 
+                ORDER BY cst_create_date DESC
+            ) AS flag_last
+        FROM bronze.crm_cust_info
+        WHERE cst_id IS NOT NULL
+    ) t 
+    WHERE flag_last = 1;
+END;
+$BODY$;
+ALTER PROCEDURE silver.load_silver_crm_cust_info()
+    OWNER TO postgres;
+
