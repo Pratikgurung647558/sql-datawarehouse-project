@@ -1,0 +1,106 @@
+-- ============================================================
+-- GOLD LAYER DATA QUALITY CHECKS
+-- Purpose: Validate data quality in the gold layer
+-- Expected: Run each block separately or all together
+-- ============================================================
+
+-- ---------- DIM_CUSTOMERS: Duplicate customer_key ----------
+SELECT customer_key, COUNT(*) AS duplicate_count
+FROM gold.dim_customers
+GROUP BY customer_key
+HAVING COUNT(*) > 1;
+
+-- ---------- DIM_CUSTOMERS: NULL customer_key / customer_id ----------
+SELECT *
+FROM gold.dim_customers
+WHERE customer_key IS NULL
+   OR customer_id IS NULL;
+
+-- ---------- DIM_CUSTOMERS: NULL first_name / last_name ----------
+SELECT *
+FROM gold.dim_customers
+WHERE first_name IS NULL
+   OR last_name IS NULL;
+
+-- ---------- DIM_CUSTOMERS: Future birthdate ----------
+SELECT *
+FROM gold.dim_customers
+WHERE birthdate > CURRENT_DATE;
+
+-- ---------- DIM_CUSTOMERS: Invalid gender ----------
+SELECT DISTINCT gender
+FROM gold.dim_customers
+WHERE gender NOT IN ('Male', 'Female', 'n/a');
+
+
+-- ---------- DIM_PRODUCTS: Duplicate product_key ----------
+SELECT product_key, COUNT(*) AS duplicate_count
+FROM gold.dim_products
+GROUP BY product_key
+HAVING COUNT(*) > 1;
+
+-- ---------- DIM_PRODUCTS: NULL product_key / product_id ----------
+SELECT *
+FROM gold.dim_products
+WHERE product_key IS NULL
+   OR product_id IS NULL;
+
+-- ---------- DIM_PRODUCTS: NULL product_name ----------
+SELECT *
+FROM gold.dim_products
+WHERE product_name IS NULL;
+
+-- ---------- DIM_PRODUCTS: Zero or negative cost ----------
+SELECT *
+FROM gold.dim_products
+WHERE cost <= 0;
+
+
+-- ---------- FACT_SALES: NULL foreign keys ----------
+SELECT *
+FROM gold.fact_sales
+WHERE customer_key IS NULL
+   OR product_key IS NULL
+   OR order_number IS NULL;
+
+-- ---------- FACT_SALES: Negative values ----------
+SELECT *
+FROM gold.fact_sales
+WHERE sales_amount < 0
+   OR quantity < 0
+   OR price < 0;
+
+-- ---------- FACT_SALES: Invalid dates ----------
+SELECT *
+FROM gold.fact_sales
+WHERE shipping_date < order_date
+   OR due_date < order_date;
+
+-- ---------- FACT_SALES: Sales amount mismatch ----------
+SELECT *
+FROM gold.fact_sales
+WHERE sales_amount != (quantity * price)
+  AND sales_amount IS NOT NULL
+  AND quantity IS NOT NULL
+  AND price IS NOT NULL;
+
+
+-- ---------- REFERENTIAL INTEGRITY: Orphan customer_keys ----------
+SELECT DISTINCT f.customer_key
+FROM gold.fact_sales f
+LEFT JOIN gold.dim_customers c ON f.customer_key = c.customer_key
+WHERE c.customer_key IS NULL;
+
+-- ---------- REFERENTIAL INTEGRITY: Orphan product_keys ----------
+SELECT DISTINCT f.product_key
+FROM gold.fact_sales f
+LEFT JOIN gold.dim_products p ON f.product_key = p.product_key
+WHERE p.product_key IS NULL;
+
+
+-- ---------- SUMMARY: Row counts ----------
+SELECT 'dim_customers' AS table_name, COUNT(*) AS row_count FROM gold.dim_customers
+UNION ALL
+SELECT 'dim_products', COUNT(*) FROM gold.dim_products
+UNION ALL
+SELECT 'fact_sales',   COUNT(*) FROM gold.fact_sales;
